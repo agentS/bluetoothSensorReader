@@ -25,8 +25,13 @@ class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
             this.scanning = true
             println("Starting BluetoothLE discovery.")
             this.bluetoothScanner.startScan(this.bluetoothLEScanCallback)
-        } else {
+        }
+    }
+
+    override fun stopDiscovery() {
+        if (this.scanning) {
             println("Stopping BluetoothLE discovery.")
+            this.onDeviceDiscovered = null
             this.bluetoothScanner.stopScan(this.bluetoothLEScanCallback)
             this.scanning = false
         }

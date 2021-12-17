@@ -2,4 +2,5 @@ package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader
 
 interface BluetoothDiscoverer {
     fun startDiscovery(onDeviceDiscovered: (String) -> Unit)
+    fun stopDiscovery()
 }

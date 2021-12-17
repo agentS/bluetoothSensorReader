@@ -13,6 +13,7 @@ data class BluetoothSensorDiscoveryState(
 
 sealed class BluetoothSensorDiscoveryAction : Action {
     data class DiscoverDevices(val forceReload: Boolean) : BluetoothSensorDiscoveryAction()
+    data class StopDiscovery(val force: Boolean) : BluetoothSensorDiscoveryAction()
     data class DeviceDiscovered(val address: String) : BluetoothSensorDiscoveryAction()
 }
 
@@ -37,7 +38,14 @@ class BluetoothSensorDiscoveryStore(private val bluetoothDiscoverer: BluetoothDi
             is BluetoothSensorDiscoveryAction.DiscoverDevices ->
                 if (!previousState.scanning) {
                     this.startBluetoothDiscovery()
-                    previousState.copy(scanning = true)
+                    previousState.copy(scanning = true, discoveredDevices = emptySet())
+                } else {
+                    previousState
+                }
+            is BluetoothSensorDiscoveryAction.StopDiscovery ->
+                if (previousState.scanning) {
+                    this.stopBluetoothDiscovery()
+                    previousState.copy(scanning = false)
                 } else {
                     previousState
                 }
@@ -62,6 +70,6 @@ class BluetoothSensorDiscoveryStore(private val bluetoothDiscoverer: BluetoothDi
     }
 
     private fun stopBluetoothDiscovery() {
-
+        this.bluetoothDiscoverer.stopDiscovery()
     }
 }
