@@ -6,12 +6,16 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.content.Context
+import com.badoo.reaktive.observable.publish
+import com.badoo.reaktive.subject.Subject
+import com.badoo.reaktive.subject.publish.PublishSubject
 
 class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
     private val bluetoothAdapter: BluetoothAdapter
     private val bluetoothScanner: BluetoothLeScanner
     private var scanning: Boolean = false
-    private var onDeviceDiscovered: ((String) -> Unit)? = null
+    private val onDeviceDiscoveredSubject: Subject<String> = PublishSubject()
+    override val onDeviceDiscovered = onDeviceDiscoveredSubject
 
     init {
         val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -19,8 +23,7 @@ class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
         this.bluetoothScanner = this.bluetoothAdapter.bluetoothLeScanner
     }
 
-    override fun startDiscovery(onDeviceDiscovered: (String) -> Unit) {
-        this.onDeviceDiscovered = onDeviceDiscovered
+    override fun startDiscovery() {
         if (!this.scanning) {
             this.scanning = true
             println("Starting BluetoothLE discovery.")
@@ -31,7 +34,6 @@ class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
     override fun stopDiscovery() {
         if (this.scanning) {
             println("Stopping BluetoothLE discovery.")
-            this.onDeviceDiscovered = null
             this.bluetoothScanner.stopScan(this.bluetoothLEScanCallback)
             this.scanning = false
         }
@@ -41,7 +43,7 @@ class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
             if (result != null) {
-                this@AndroidBluetoothDiscoverer.onDeviceDiscovered?.invoke(result.device.address)
+                this@AndroidBluetoothDiscoverer.onDeviceDiscoveredSubject.onNext(result.device.address)
             }
         }
     }

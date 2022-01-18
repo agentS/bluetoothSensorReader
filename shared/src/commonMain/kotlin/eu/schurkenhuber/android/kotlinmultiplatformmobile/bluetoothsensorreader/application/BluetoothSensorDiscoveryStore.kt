@@ -1,5 +1,10 @@
 package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application
 
+import com.badoo.reaktive.disposable.Disposable
+import com.badoo.reaktive.observable.ObservableObserver
+import com.badoo.reaktive.observable.subscribe
+import com.badoo.reaktive.subject.Subject
+import com.badoo.reaktive.subject.publish.PublishSubject
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.BluetoothDiscoverer
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -26,6 +31,13 @@ class BluetoothSensorDiscoveryStore(private val bluetoothDiscoverer: BluetoothDi
         discoveredDevices = emptySet()
     ))
     private val sideEffect = MutableSharedFlow<BluetoothSensorDiscoverySideEffect>()
+
+    init {
+        this.bluetoothDiscoverer.onDeviceDiscovered.subscribe(
+            isThreadLocal = false,
+            onNext = this::onBluetoothDeviceDiscovered
+        )
+    }
 
     override fun observeState(): StateFlow<BluetoothSensorDiscoveryState> = this.state
 
@@ -62,7 +74,7 @@ class BluetoothSensorDiscoveryStore(private val bluetoothDiscoverer: BluetoothDi
     }
 
     private fun startBluetoothDiscovery() {
-        this.bluetoothDiscoverer.startDiscovery(this::onBluetoothDeviceDiscovered)
+        this.bluetoothDiscoverer.startDiscovery()
     }
 
     private fun onBluetoothDeviceDiscovered(address: String) {

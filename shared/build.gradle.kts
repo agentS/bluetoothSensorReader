@@ -19,8 +19,10 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-                // coroutines
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${findProperty("version.kotlinx.coroutines")}")
+                implementation("com.badoo.reaktive:reaktive:1.2.1")
+                implementation("com.badoo.reaktive:reaktive-annotations:1.2.1")
+                implementation("com.badoo.reaktive:coroutines-interop:1.2.1-nmtc")
             }
         }
         val commonTest by getting {
