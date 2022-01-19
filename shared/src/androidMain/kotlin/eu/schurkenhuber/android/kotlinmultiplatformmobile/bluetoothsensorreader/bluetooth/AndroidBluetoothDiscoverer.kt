@@ -9,12 +9,13 @@ import android.content.Context
 import com.badoo.reaktive.observable.publish
 import com.badoo.reaktive.subject.Subject
 import com.badoo.reaktive.subject.publish.PublishSubject
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.model.BluetoothDeviceInformation
 
 class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
     private val bluetoothAdapter: BluetoothAdapter
     private val bluetoothScanner: BluetoothLeScanner
     private var scanning: Boolean = false
-    private val onDeviceDiscoveredSubject: Subject<String> = PublishSubject()
+    private val onDeviceDiscoveredSubject: Subject<BluetoothDeviceInformation> = PublishSubject()
     override val onDeviceDiscovered = onDeviceDiscoveredSubject
 
     init {
@@ -43,7 +44,15 @@ class AndroidBluetoothDiscoverer(context: Context) : BluetoothDiscoverer {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
             if (result != null) {
-                this@AndroidBluetoothDiscoverer.onDeviceDiscoveredSubject.onNext(result.device.address)
+                this@AndroidBluetoothDiscoverer.onDeviceDiscoveredSubject.onNext(
+                    BluetoothDeviceInformation(
+                        result.device.address,
+                        result.device.name ?: result.device.address,
+                        result.rssi,
+                        result.device.address
+                    )
+                )
+
             }
         }
     }

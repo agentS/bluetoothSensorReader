@@ -3,13 +3,17 @@ package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader
 import android.app.Application
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryStore
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.AndroidBluetoothDiscoverer
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.AndroidBluetoothSensorAccessor
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 
 class App : Application() {
     private val applicationModule = module {
-        single { BluetoothSensorDiscoveryStore(AndroidBluetoothDiscoverer(this.get())) }
+        single { BluetoothSensorDiscoveryStore(
+            AndroidBluetoothDiscoverer(this.get()),
+            AndroidBluetoothSensorAccessor(this.get())
+        ) }
     }
 
     override fun onCreate() {

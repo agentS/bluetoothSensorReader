@@ -1,0 +1,80 @@
+package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth
+
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.content.*
+import android.os.IBinder
+import com.badoo.reaktive.observable.Observable
+import com.badoo.reaktive.subject.publish.PublishSubject
+import java.lang.IllegalArgumentException
+
+class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSensorAccessor {
+    private val connectionStatusSubject = PublishSubject<ConnectionStatus>()
+    override val connectionStatus: Observable<ConnectionStatus> = this.connectionStatusSubject
+
+    private var bluetoothLEService: BluetoothLEService? = null
+
+    private val serviceConnection = object : ServiceConnection {
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            println("BluetoothLE service connected!")
+            this@AndroidBluetoothSensorAccessor.bluetoothLEService =
+                (service as BluetoothLEService.LocalBinder).getService()
+            this@AndroidBluetoothSensorAccessor.bluetoothLEService?.initialise()
+        }
+
+        override fun onServiceDisconnected(name: ComponentName?) {
+            println("BluetoothLE service disconnected!")
+            this@AndroidBluetoothSensorAccessor.bluetoothLEService = null
+        }
+    }
+
+    init {
+        val bluetoothLEServiceIntent = Intent(this.context, BluetoothLEService::class.java)
+        val serviceBound = this.context.bindService(
+            bluetoothLEServiceIntent,
+            this.serviceConnection,
+            Context.BIND_AUTO_CREATE
+        )
+        println("Has the BluetoothLE service successfully been bound? $serviceBound")
+    }
+
+    override fun connect(identifier: String) {
+        this.context.registerReceiver(this.gattUpdateReceiver, this.createGATTUpdateFilter())
+        this@AndroidBluetoothSensorAccessor.bluetoothLEService?.let { service ->
+            service.connect(identifier)
+        }
+    }
+
+    override fun disconnect() {
+        try {
+            this.context.unregisterReceiver(this.gattUpdateReceiver)
+        } catch (exception: IllegalArgumentException) {
+            System.err.println(exception)
+        }
+        try {
+            this.context.unbindService(this.serviceConnection)
+        } catch (exception: IllegalArgumentException) {
+            System.err.println(exception)
+        }
+    }
+
+    private val gattUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            when (intent.action) {
+                BluetoothLEService.ACTION_GATT_CONNECTED -> {
+                    this@AndroidBluetoothSensorAccessor.connectionStatusSubject.onNext(ConnectionStatus.CONNECTED)
+                }
+                BluetoothLEService.ACTION_GATT_DISCONNECTED -> {
+                    this@AndroidBluetoothSensorAccessor.connectionStatusSubject.onNext(ConnectionStatus.DISCONNECTED)
+                }
+            }
+        }
+    }
+
+    private fun createGATTUpdateFilter(): IntentFilter {
+        return IntentFilter().apply {
+            this.addAction(BluetoothLEService.ACTION_GATT_CONNECTED)
+            this.addAction(BluetoothLEService.ACTION_GATT_DISCONNECTED)
+        }
+    }
+}
