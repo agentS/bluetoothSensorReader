@@ -4,6 +4,7 @@ import android.content.*
 import android.os.IBinder
 import com.badoo.reaktive.observable.Observable
 import com.badoo.reaktive.subject.publish.PublishSubject
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.InclinationMeasurement
 import java.lang.IllegalArgumentException
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
@@ -11,6 +12,9 @@ import kotlin.coroutines.suspendCoroutine
 class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSensorAccessor {
     private val connectionStatusSubject = PublishSubject<ConnectionStatus>()
     override val connectionStatus: Observable<ConnectionStatus> = this.connectionStatusSubject
+
+    private val inclinationMeasurementSubject = PublishSubject<InclinationMeasurement>()
+    override val inclinationMeasurements: Observable<InclinationMeasurement> = this.inclinationMeasurementSubject
 
     private var bluetoothLEService: BluetoothLEService? = null
 
@@ -121,8 +125,33 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         )
     }
 
-    override suspend fun fetchInclination(): Double {
-        TODO("Not yet implemented")
+    override suspend fun startInclinationMeasuring() {
+        val intentFilter = IntentFilter().apply {
+            this.addAction(BluetoothLEService.ACTION_GATT_NOTIFICATION)
+        }
+        this.context.registerReceiver(this.inclinationMeasurementHandler, intentFilter)
+        this.bluetoothLEService?.setCharacteristicNotification(
+            ServiceUUIDs.INCLINATION_SERVICE,
+            ServiceUUIDs.InclinationCharacteristicUUIDs.INCLINATION
+        )
+    }
+
+    private val inclinationMeasurementHandler = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            val counter = intent.getIntExtra(BluetoothLEService.EXTRA_GATT_COUNTER_VALUE, -1)
+            val inclination = intent.getDoubleExtra(BluetoothLEService.EXTRA_GATT_FLOAT_VALUE, 0.0)
+            this@AndroidBluetoothSensorAccessor.inclinationMeasurementSubject.onNext(
+                InclinationMeasurement(counter,  inclination)
+            )
+        }
+    }
+
+    override suspend fun stopInclinationMeasuring() {
+        this.context.unregisterReceiver(this.inclinationMeasurementHandler)
+        this.bluetoothLEService?.cancelCharacteristicNotification(
+            ServiceUUIDs.INCLINATION_SERVICE,
+            ServiceUUIDs.InclinationCharacteristicUUIDs.INCLINATION
+        )
     }
 
     override suspend fun startBlinking() {

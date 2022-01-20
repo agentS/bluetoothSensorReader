@@ -41,6 +41,18 @@ class SensorReadingActivity : ComponentActivity() {
 
         Column {
             Text(text = "${context.getString(R.string.lblConnectionStatus)} ${state.value.connectionStatus}")
+
+            Text(text = "${context.getString(R.string.lblInclination)} = ${state.value.inclination.inclination} (${context.getString(R.string.lblCounter)}: ${state.value.inclination.counter})")
+            if (!state.value.measuringInclination) {
+                Button(onClick = this@SensorReadingActivity::startInclinationMeasurement, Modifier.fillMaxWidth()) {
+                    Text(text = context.getString(R.string.btnStartInclinationMeasurement))
+                }
+            } else {
+                Button(onClick = this@SensorReadingActivity::stopInclinationMeasurement, Modifier.fillMaxWidth()) {
+                    Text(text = context.getString(R.string.btnStopInclinationMeasurement))
+                }
+            }
+
             Text(text = "${context.getString(R.string.lblPressure)} = ${state.value.environmentReadings.pressure} mbar")
             Text(text = "${context.getString(R.string.lblHumidity)} = ${state.value.environmentReadings.humidity} %")
             Text(text = "${context.getString(R.string.lblTemperature)} = ${state.value.environmentReadings.temperature} °C")
@@ -51,6 +63,14 @@ class SensorReadingActivity : ComponentActivity() {
                 Text(text = context.getString(R.string.btnDisconnect))
             }
         }
+    }
+
+    fun startInclinationMeasurement() {
+        this.store.dispatch(BluetoothSensorDiscoveryAction.StartInclinationMeasuring(force = false))
+    }
+
+    fun stopInclinationMeasurement() {
+        this.store.dispatch(BluetoothSensorDiscoveryAction.StopInclinationMeasuring(force = false))
     }
 
     fun fetchEnvironmentReadings() {

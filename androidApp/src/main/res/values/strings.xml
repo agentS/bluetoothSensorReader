@@ -8,6 +8,10 @@
     <string name="lblHumidity">Humidity</string>
     <string name="lblTemperature">Temperature</string>
     <string name="btnFetchEnvironmentReadings">Load environment data</string>
+    <string name="lblInclination">Inclination</string>
+    <string name="lblCounter">Counter</string>
+    <string name="btnStartInclinationMeasurement">Start inclination measurement</string>
+    <string name="btnStopInclinationMeasurement">Stop inclination measurement</string>
     <string name="btnDisconnect">Disconnect</string>
     <string name="msgBluetoothLEConnectionLost">Bluetooth connection lost!</string>
 </resources>
