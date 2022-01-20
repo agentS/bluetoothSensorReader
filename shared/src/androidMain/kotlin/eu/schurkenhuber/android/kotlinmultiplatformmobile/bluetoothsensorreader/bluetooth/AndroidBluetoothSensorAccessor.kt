@@ -1,12 +1,12 @@
 package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothManager
 import android.content.*
 import android.os.IBinder
 import com.badoo.reaktive.observable.Observable
 import com.badoo.reaktive.subject.publish.PublishSubject
 import java.lang.IllegalArgumentException
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSensorAccessor {
     private val connectionStatusSubject = PublishSubject<ConnectionStatus>()
@@ -76,5 +76,60 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
             this.addAction(BluetoothLEService.ACTION_GATT_CONNECTED)
             this.addAction(BluetoothLEService.ACTION_GATT_DISCONNECTED)
         }
+    }
+
+    override suspend fun fetchPressure(): Double {
+        return this.fetchDoubleValue(
+            ServiceUUIDs.ENVIRONMENTAL_SENSING,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.PRESSURE,
+            floatingPointDivisor = 10
+        )
+    }
+
+    private suspend fun fetchDoubleValue(serviceUUID: String, characteristicUUID: String, floatingPointDivisor: Int = 1): Double = suspendCoroutine { continuation ->
+        val gattValueReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                context.unregisterReceiver(this)
+
+                val value = (
+                        intent.getDoubleExtra(BluetoothLEService.EXTRA_GATT_FLOAT_VALUE, 0.0)
+                        / floatingPointDivisor
+                )
+                continuation.resume(value)
+            }
+        }
+
+        this.context.registerReceiver(gattValueReceiver, this.createGATTReadFilter())
+        this.bluetoothLEService?.readCharacteristic(serviceUUID, characteristicUUID)
+    }
+
+    private fun createGATTReadFilter() = IntentFilter().apply {
+        this.addAction(BluetoothLEService.ACTION_GATT_READ)
+    }
+
+    override suspend fun fetchTemperature(): Double {
+        return this.fetchDoubleValue(
+            ServiceUUIDs.ENVIRONMENTAL_SENSING,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.TEMPERATURE
+        )
+    }
+
+    override suspend fun fetchHumidity(): Double {
+        return this.fetchDoubleValue(
+            ServiceUUIDs.ENVIRONMENTAL_SENSING,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.HUMIDITY
+        )
+    }
+
+    override suspend fun fetchInclination(): Double {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun startBlinking() {
+        TODO("Not yet implemented")
+    }
+
+    override suspend fun stopBlinking() {
+        TODO("Not yet implemented")
     }
 }

@@ -3,5 +3,11 @@
     <string name="lblDiscoverDevices">Discover devices</string>
     <string name="lblApplicationName">Bluetooth Discovery</string>
     <string name="lblConnectiong">Connecting...</string>
+    <string name="lblConnectionStatus">Connection status: </string>
+    <string name="lblPressure">Pressure</string>
+    <string name="lblHumidity">Humidity</string>
+    <string name="lblTemperature">Temperature</string>
+    <string name="btnFetchEnvironmentReadings">Load environment data</string>
+    <string name="btnDisconnect">Disconnect</string>
     <string name="msgBluetoothLEConnectionLost">Bluetooth connection lost!</string>
 </resources>

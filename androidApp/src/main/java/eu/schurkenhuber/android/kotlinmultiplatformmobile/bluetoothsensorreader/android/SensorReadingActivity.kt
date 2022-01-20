@@ -12,6 +12,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryAction
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryStore
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.ConnectionStatus
@@ -31,6 +32,7 @@ class SensorReadingActivity : ComponentActivity() {
     @Composable
     fun SensorReadingFragment() {
         val state = this.store.observeState().collectAsState()
+        val context = LocalContext.current
 
         if (state.value.connectionStatus == ConnectionStatus.DISCONNECTED) {
             Toast.makeText(this, R.string.msgBluetoothLEConnectionLost, Toast.LENGTH_LONG).show()
@@ -38,11 +40,21 @@ class SensorReadingActivity : ComponentActivity() {
         }
 
         Column {
-            Text(text = "Connection status: ${state.value.connectionStatus}")
+            Text(text = "${context.getString(R.string.lblConnectionStatus)} ${state.value.connectionStatus}")
+            Text(text = "${context.getString(R.string.lblPressure)} = ${state.value.environmentReadings.pressure} mbar")
+            Text(text = "${context.getString(R.string.lblHumidity)} = ${state.value.environmentReadings.humidity} %")
+            Text(text = "${context.getString(R.string.lblTemperature)} = ${state.value.environmentReadings.temperature} °C")
+            Button(onClick = this@SensorReadingActivity::fetchEnvironmentReadings, Modifier.fillMaxWidth()) {
+                Text(text = context.getString(R.string.btnFetchEnvironmentReadings))
+            }
             Button(onClick = this@SensorReadingActivity::disconnect, Modifier.fillMaxWidth()) {
-                Text(text = "Disconnect")
+                Text(text = context.getString(R.string.btnDisconnect))
             }
         }
+    }
+
+    fun fetchEnvironmentReadings() {
+        this.store.dispatch(BluetoothSensorDiscoveryAction.FetchEnvironmentReadings(force = false))
     }
 
     fun disconnect() {

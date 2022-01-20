@@ -1,24 +1,31 @@
 package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application
 
-import com.badoo.reaktive.disposable.Disposable
-import com.badoo.reaktive.observable.ObservableObserver
 import com.badoo.reaktive.observable.subscribe
-import com.badoo.reaktive.subject.Subject
-import com.badoo.reaktive.subject.publish.PublishSubject
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.BluetoothDiscoverer
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.BluetoothSensorAccessor
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.ConnectionStatus
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.model.BluetoothDeviceInformation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+
+data class EnvironmentReadings(
+    val pressure: Double,
+    val humidity: Double,
+    val temperature: Double
+)
 
 data class BluetoothSensorDiscoveryState(
     val scanning: Boolean,
     val connectionStatus: ConnectionStatus,
     val discoveredDevices: Set<BluetoothDeviceInformation>,
-    val connectedDevice: BluetoothDeviceInformation?
+    val connectedDevice: BluetoothDeviceInformation?,
+    val environmentReadings: EnvironmentReadings
 ) : State
 
 sealed class BluetoothSensorDiscoveryAction : Action {
@@ -28,6 +35,8 @@ sealed class BluetoothSensorDiscoveryAction : Action {
     data class ConnectToSensor(val deviceInformation: BluetoothDeviceInformation) : BluetoothSensorDiscoveryAction()
     data class ConnectionEstablished(val connectionStatus: ConnectionStatus) : BluetoothSensorDiscoveryAction()
     data class DisconnectFromSensor(val connectionStatus: ConnectionStatus) : BluetoothSensorDiscoveryAction()
+    data class FetchEnvironmentReadings(val force: Boolean) : BluetoothSensorDiscoveryAction()
+    data class EnvironmentReadingsFetched(val environmentReadings: EnvironmentReadings) : BluetoothSensorDiscoveryAction()
 }
 
 sealed class BluetoothSensorDiscoverySideEffect : Effect {}
@@ -36,13 +45,15 @@ class BluetoothSensorDiscoveryStore(
     private val bluetoothDiscoverer: BluetoothDiscoverer,
     private val bluetoothSensorAccessor: BluetoothSensorAccessor
 )
-    : Store<BluetoothSensorDiscoveryState, BluetoothSensorDiscoveryAction, BluetoothSensorDiscoverySideEffect> {
+    : Store<BluetoothSensorDiscoveryState, BluetoothSensorDiscoveryAction, BluetoothSensorDiscoverySideEffect>,
+        CoroutineScope by CoroutineScope(Dispatchers.Main) {
 
     private val state = MutableStateFlow(BluetoothSensorDiscoveryState(
         scanning = false,
         connectionStatus = ConnectionStatus.DISCONNECTED,
         discoveredDevices = emptySet(),
-        connectedDevice = null
+        connectedDevice = null,
+        EnvironmentReadings(pressure = 0.0, humidity = 0.0, temperature = 0.0)
     ))
     private val sideEffect = MutableSharedFlow<BluetoothSensorDiscoverySideEffect>()
 
@@ -106,6 +117,13 @@ class BluetoothSensorDiscoveryStore(
                     discoveredDevices = emptySet()
                 )
             }
+            is BluetoothSensorDiscoveryAction.FetchEnvironmentReadings -> {
+                launch { this@BluetoothSensorDiscoveryStore.fetchEnvironmentReadings() }
+                previousState
+            }
+            is BluetoothSensorDiscoveryAction.EnvironmentReadingsFetched -> {
+                previousState.copy(environmentReadings = action.environmentReadings)
+            }
         }
 
         if (nextState != previousState) {
@@ -140,5 +158,18 @@ class BluetoothSensorDiscoveryStore(
             ConnectionStatus.DISCONNECTED -> this.dispatch(BluetoothSensorDiscoveryAction.DisconnectFromSensor(status))
             else -> println("Changed Bluetooth LE connection status to $status.")
         }
+    }
+
+    private suspend fun fetchEnvironmentReadings() {
+        val pressure = this.bluetoothSensorAccessor.fetchPressure()
+        delay(250)
+        val humidity = this.bluetoothSensorAccessor.fetchHumidity()
+        delay(250)
+        val temperature = this.bluetoothSensorAccessor.fetchTemperature()
+        this.dispatch(BluetoothSensorDiscoveryAction.EnvironmentReadingsFetched(EnvironmentReadings(
+            pressure,
+            humidity,
+            temperature,
+        )))
     }
 }
