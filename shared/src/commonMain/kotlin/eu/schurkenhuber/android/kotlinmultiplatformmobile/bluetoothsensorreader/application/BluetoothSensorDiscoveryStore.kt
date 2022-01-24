@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 
 data class EnvironmentReadings(
     val pressure: Double,
@@ -27,7 +28,7 @@ data class InclinationMeasurement(
 data class BluetoothSensorDiscoveryState(
     val scanning: Boolean,
     val connectionStatus: ConnectionStatus,
-    val discoveredDevices: Set<BluetoothDeviceInformation>,
+    val discoveredDevices: Map<String, BluetoothDeviceInformation>,
     val connectedDevice: BluetoothDeviceInformation?,
     val environmentReadings: EnvironmentReadings,
     val measuringInclination: Boolean,
@@ -60,7 +61,7 @@ class BluetoothSensorDiscoveryStore(
     private val state = MutableStateFlow(BluetoothSensorDiscoveryState(
         scanning = false,
         connectionStatus = ConnectionStatus.DISCONNECTED,
-        discoveredDevices = emptySet(),
+        discoveredDevices = emptyMap(),
         connectedDevice = null,
         EnvironmentReadings(pressure = 0.0, humidity = 0.0, temperature = 0.0),
         measuringInclination = false,
@@ -94,7 +95,7 @@ class BluetoothSensorDiscoveryStore(
             is BluetoothSensorDiscoveryAction.DiscoverDevices ->
                 if (!previousState.scanning) {
                     this.startBluetoothDiscovery()
-                    previousState.copy(scanning = true, discoveredDevices = emptySet(), connectionStatus = ConnectionStatus.DISCONNECTED)
+                    previousState.copy(scanning = true, discoveredDevices = emptyMap(), connectionStatus = ConnectionStatus.DISCONNECTED)
                 } else {
                     previousState
                 }
@@ -105,10 +106,11 @@ class BluetoothSensorDiscoveryStore(
                 } else {
                     previousState
                 }
-            is BluetoothSensorDiscoveryAction.DeviceDiscovered ->
+            is BluetoothSensorDiscoveryAction.DeviceDiscovered -> {
                 previousState.copy(
-                    discoveredDevices = previousState.discoveredDevices + action.deviceInformation // setOf(*previousState.discoveredDevices.toTypedArray(), action.address)
+                    discoveredDevices = previousState.discoveredDevices + (action.deviceInformation.identifier to action.deviceInformation)
                 )
+            }
             is BluetoothSensorDiscoveryAction.ConnectToSensor -> {
                 this.stopBluetoothDiscovery()
                 this.connectToSensor(action.deviceInformation)
@@ -116,7 +118,7 @@ class BluetoothSensorDiscoveryStore(
                     scanning = false,
                     connectionStatus = ConnectionStatus.CONNECTING,
                     connectedDevice = action.deviceInformation,
-                    discoveredDevices = emptySet()
+                    discoveredDevices = emptyMap()
                 )
             }
             is BluetoothSensorDiscoveryAction.ConnectionEstablished -> {
@@ -125,12 +127,21 @@ class BluetoothSensorDiscoveryStore(
                 )
             }
             is BluetoothSensorDiscoveryAction.DisconnectFromSensor -> {
-                this.disconnectFromSensor()
+                runBlocking {
+                    if (previousState.connectionStatus == ConnectionStatus.CONNECTED) {
+                        this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring()
+                    }
+                    this@BluetoothSensorDiscoveryStore.disconnectFromSensor()
+                }
                 previousState.copy(
                     connectionStatus = ConnectionStatus.DISCONNECTED,
                     connectedDevice = null,
-                    discoveredDevices = emptySet()
+                    discoveredDevices = emptyMap(),
+                    environmentReadings = EnvironmentReadings(pressure = 0.0, humidity = 0.0, temperature = 0.0),
+                    measuringInclination = false,
+                    inclination = InclinationMeasurement(counter = 0, inclination = 0.0)
                 )
+
             }
             is BluetoothSensorDiscoveryAction.FetchEnvironmentReadings -> {
                 launch { this@BluetoothSensorDiscoveryStore.fetchEnvironmentReadings() }
@@ -152,7 +163,7 @@ class BluetoothSensorDiscoveryStore(
             }
         }
 
-        if (nextState != previousState) {
+        if (nextState != previousState || action is BluetoothSensorDiscoveryAction.DeviceDiscovered) {
             println("switching to state $nextState from $previousState")
             this.state.value = nextState
         }

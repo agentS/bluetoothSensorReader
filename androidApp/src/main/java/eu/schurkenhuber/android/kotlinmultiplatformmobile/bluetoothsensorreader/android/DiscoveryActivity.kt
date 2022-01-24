@@ -45,7 +45,11 @@ class DiscoveryActivity : ComponentActivity() {
         val discoveryButtonHandler = remember(state.value.scanning) {
             if (!state.value.scanning) this@DiscoveryActivity::startDiscovery else this@DiscoveryActivity::stopDiscovery
         }
-        val discoveredDevices = remember(state.value.discoveredDevices) { state.value.discoveredDevices.toTypedArray() }
+        val discoveredDevices = remember(state.value.discoveredDevices) {
+            state.value.discoveredDevices.values
+                .sortedByDescending { device -> device.rssi }
+                .toTypedArray()
+        }
 
         Column {
             Button(onClick = discoveryButtonHandler, Modifier.fillMaxWidth()) {
