@@ -31,7 +31,6 @@ class ConnectingActivity : ComponentActivity() {
         if (state.value.connectionStatus == ConnectionStatus.CONNECTED) {
             val intent = Intent(this, SensorReadingActivity::class.java)
             this.startActivity(intent)
-            println("Started sensor reading activity.")
         } else if (state.value.connectionStatus == ConnectionStatus.DISCONNECTED) {
             val intent = Intent(this, DiscoveryActivity::class.java)
             this.startActivity(intent)
