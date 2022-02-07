@@ -9,31 +9,14 @@
 import SwiftUI
 import shared
 
-// TODO: replace with an extension to the class `BluetoothDeviceInformation` which implements the protocol `Identifiable`
-// this should be fairly easy
-struct IOSBluetoothDeviceInformation : Identifiable {
-    let identifier: String
-    let name: String
-    let rssi: Int
-    
-    var id: String { self.identifier }
-    
-    init(
-        identifier: String,
-        name: String,
-        rssi: Int
-    ) {
-        self.identifier = identifier
-        self.name = name
-        self.rssi = rssi
-    }
+extension BluetoothDeviceInformation : Identifiable {
+    public var id: String { self.identifier }
 }
-// end TODO
 
 struct DiscoveryView: ConnectedView {
     struct Props {
         let discovering: Bool
-        let discoveredDevices: [IOSBluetoothDeviceInformation]
+        let discoveredDevices: [BluetoothDeviceInformation]
         
         let onStartDiscovery: () -> Void
         let onStopDiscovery: () -> Void
@@ -42,13 +25,11 @@ struct DiscoveryView: ConnectedView {
     func map(state: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props {
         return Props(
             discovering: state.scanning,
-            discoveredDevices: Array(
-                state.discoveredDevices.values.map { device in
-                    IOSBluetoothDeviceInformation(identifier: device.identifier, name: device.name, rssi: Int(device.rssi))
+            discoveredDevices: Array(state.discoveredDevices.values)
+                .sorted(by: { leftHandSide, rightHandSide in
+                    rightHandSide.rssi < leftHandSide.rssi
                 }
-            ).sorted(by: { leftHandSide, rightHandSide in
-                rightHandSide.rssi < leftHandSide.rssi
-            }),
+            ),
             onStartDiscovery: { dispatch(BluetoothSensorDiscoveryAction.DiscoverDevices(forceReload: false)) },
             onStopDiscovery: { dispatch(BluetoothSensorDiscoveryAction.StopDiscovery(force: true)) }
         )
