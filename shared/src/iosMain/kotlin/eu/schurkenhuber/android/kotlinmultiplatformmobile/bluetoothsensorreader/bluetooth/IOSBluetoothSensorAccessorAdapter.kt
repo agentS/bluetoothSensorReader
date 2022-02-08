@@ -37,11 +37,17 @@ class IOSBluetoothSensorAccessorAdapter(iosBluetoothAccessor: IOSBluetoothAccess
     override val inclinationMeasurements: Observable<InclinationMeasurement> = this.bluetoothSensorAccessor.inclinationMeasurements
 
     override suspend fun startInclinationMeasuring(peripheralIdentifier: String) {
-        TODO("Not yet implemented")
+        this.bluetoothSensorAccessor.subscribeToCharacteristic(
+            peripheralIdentifier,
+            ServiceUUIDs.InclinationCharacteristicUUIDs.INCLINATION
+        )
     }
 
     override suspend fun stopInclinationMeasuring(peripheralIdentifier: String) {
-        TODO("Not yet implemented")
+        this.bluetoothSensorAccessor.unsubscribeFromCharacteristic(
+            peripheralIdentifier,
+            ServiceUUIDs.InclinationCharacteristicUUIDs.INCLINATION
+        )
     }
 
     override suspend fun startBlinking(peripheralIdentifier: String) {

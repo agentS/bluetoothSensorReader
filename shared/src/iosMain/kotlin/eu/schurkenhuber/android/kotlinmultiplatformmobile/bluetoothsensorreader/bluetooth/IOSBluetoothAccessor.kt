@@ -11,7 +11,6 @@ import kotlinx.coroutines.channels.Channel
 import platform.CoreBluetooth.*
 import platform.Foundation.*
 import platform.darwin.NSObject
-import platform.darwin.Ptr
 import platform.posix.memcpy
 
 // see https://iqcode.com/code/other/implement-swift-protocol-in-kotlin
@@ -156,9 +155,18 @@ class IOSBluetoothAccessor : NSObject(), CBCentralManagerDelegateProtocol, CBPer
         didUpdateValueForCharacteristic: CBCharacteristic,
         error: NSError?
     ) {
-        val channel = this.lookupCharacteristicReadChannel(didUpdateValueForCharacteristic.UUID.UUIDString)
-        didUpdateValueForCharacteristic.value?.let { data ->
-            // fuck this shit: https://github.com/Reedyuk/blue-falcon/blob/master/library/src/iosMain/kotlin/dev/bluefalcon/BluetoothCharacteristic.kt
+        if (this.environmentReadingServiceCharacteristics.containsKey(didUpdateValueForCharacteristic.UUID.UUIDString)) {
+            this.onReadResultReceived(peripheral, didUpdateValueForCharacteristic)
+        } else if (this.automationServiceCharacteristics.containsKey(didUpdateValueForCharacteristic.UUID.UUIDString)) {
+            this.onNotificationReceived(peripheral, didUpdateValueForCharacteristic)
+        }
+    }
+
+    private fun onReadResultReceived(peripheral: CBPeripheral, characteristic: CBCharacteristic) {
+        val channel = this.lookupCharacteristicReadChannel(characteristic.UUID.UUIDString)
+        characteristic.value?.let { data ->
+            // fuck this shit
+            // for a good solution see https://github.com/Reedyuk/blue-falcon/blob/master/library/src/iosMain/kotlin/dev/bluefalcon/BluetoothCharacteristic.kt
             val bytes = ByteArray(data.length.toInt()).apply {
                 usePinned {
                     memcpy(it.addressOf(0), data.bytes, data.length)
@@ -173,16 +181,66 @@ class IOSBluetoothAccessor : NSObject(), CBCentralManagerDelegateProtocol, CBPer
     ) = this.characteristicReadingChannels[characteristicUUID] ?: throw RuntimeException("No result channel found for characteristic $characteristicUUID.")
 
     private fun lookupCharacteristic(service: BluetoothLEServices, characteristicUUID: String): CBCharacteristic {
-        val characeristicMap = when (service) {
+        val characteristicMap = when (service) {
             BluetoothLEServices.ENVIRONMENTAL_SENSING -> this.environmentReadingServiceCharacteristics
             BluetoothLEServices.AUTOMATION -> this.automationServiceCharacteristics
         }
-        val characteristic = characeristicMap[characteristicUUID]
+        val characteristic = characteristicMap[characteristicUUID]
         if (characteristic != null) {
             return characteristic
         } else {
             throw RuntimeException("No characteristic with UUID $characteristicUUID discovered for service $service.")
         }
+    }
+
+    fun subscribeToCharacteristic(
+        peripheralIdentifier: String,
+        characteristicUUID: String
+    ) {
+        this.setCharacteristicNotificationStatus(
+            peripheralIdentifier, characteristicUUID,
+            enabled = true
+        )
+    }
+
+    private fun setCharacteristicNotificationStatus(
+        peripheralIdentifier: String,
+        characteristicUUID: String,
+        enabled: Boolean
+    ) {
+        val peripheral = this@IOSBluetoothAccessor.lookupPeripheral(peripheralIdentifier)
+        val characteristic = this@IOSBluetoothAccessor.lookupCharacteristic(
+            BluetoothLEServices.AUTOMATION,
+            characteristicUUID
+        )
+        peripheral.setNotifyValue(enabled = enabled, characteristic)
+    }
+
+    private fun onNotificationReceived(peripheral: CBPeripheral, characteristic: CBCharacteristic) {
+        characteristic.value?.let { data ->
+            // fuck this shit
+            // for a good solution see https://github.com/Reedyuk/blue-falcon/blob/master/library/src/iosMain/kotlin/dev/bluefalcon/BluetoothCharacteristic.kt
+            val bytes = ByteArray(data.length.toInt()).apply {
+                usePinned {
+                    memcpy(it.addressOf(0), data.bytes, data.length)
+                }
+            }
+            val measurement = InclinationMeasurement(
+                counter = bytes.getUShortAt(0).toInt(),
+                inclination = bytes.getFloatAt(2).toDouble()
+            )
+            this.inclinationMeasurementsSubject.onNext(measurement)
+        }
+    }
+
+    fun unsubscribeFromCharacteristic(
+        peripheralIdentifier: String,
+        characteristicUUID: String
+    ) {
+        this.setCharacteristicNotificationStatus(
+            peripheralIdentifier, characteristicUUID,
+            enabled = false
+        )
     }
 
     override fun centralManager(
