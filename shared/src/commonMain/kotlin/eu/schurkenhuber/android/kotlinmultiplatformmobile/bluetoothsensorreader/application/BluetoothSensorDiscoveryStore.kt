@@ -129,9 +129,11 @@ class BluetoothSensorDiscoveryStore(
             is BluetoothSensorDiscoveryAction.DisconnectFromSensor -> {
                 runBlocking {
                     if (previousState.connectionStatus == ConnectionStatus.CONNECTED) {
-                        this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring()
+                        this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring(previousState.connectedDevice?.identifier ?: "")
                     }
-                    this@BluetoothSensorDiscoveryStore.disconnectFromSensor()
+                    if (previousState.connectedDevice != null) {
+                        this@BluetoothSensorDiscoveryStore.disconnectFromSensor(previousState.connectedDevice)
+                    }
                 }
                 previousState.copy(
                     connectionStatus = ConnectionStatus.DISCONNECTED,
@@ -144,21 +146,21 @@ class BluetoothSensorDiscoveryStore(
 
             }
             is BluetoothSensorDiscoveryAction.FetchEnvironmentReadings -> {
-                launch { this@BluetoothSensorDiscoveryStore.fetchEnvironmentReadings() }
+                launch { this@BluetoothSensorDiscoveryStore.fetchEnvironmentReadings(previousState.connectedDevice?.identifier ?: "") }
                 previousState
             }
             is BluetoothSensorDiscoveryAction.EnvironmentReadingsFetched -> {
                 previousState.copy(environmentReadings = action.environmentReadings)
             }
             is BluetoothSensorDiscoveryAction.StartInclinationMeasuring -> {
-                launch { this@BluetoothSensorDiscoveryStore.startInclinationMeasuring() }
+                launch { this@BluetoothSensorDiscoveryStore.startInclinationMeasuring(previousState.connectedDevice?.identifier ?: "") }
                 previousState.copy(measuringInclination = true)
             }
             is BluetoothSensorDiscoveryAction.InclinationMeasurementReceived -> {
                 previousState.copy(inclination = action.inclination)
             }
             is BluetoothSensorDiscoveryAction.StopInclinationMeasuring -> {
-                launch { this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring() }
+                launch { this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring(previousState.connectedDevice?.identifier ?: "") }
                 previousState.copy(measuringInclination = false)
             }
         }
@@ -185,8 +187,8 @@ class BluetoothSensorDiscoveryStore(
         this.bluetoothSensorAccessor.connect(deviceInformation.identifier)
     }
 
-    private fun disconnectFromSensor() {
-        this.bluetoothSensorAccessor.disconnect()
+    private fun disconnectFromSensor(deviceInformation: BluetoothDeviceInformation) {
+        this.bluetoothSensorAccessor.disconnect(deviceInformation.identifier)
     }
 
     private fun onBluetoothLEConnectionStatusChanged(status: ConnectionStatus) {
@@ -197,22 +199,22 @@ class BluetoothSensorDiscoveryStore(
         }
     }
 
-    private suspend fun startInclinationMeasuring() {
-        this.bluetoothSensorAccessor.startInclinationMeasuring()
+    private suspend fun startInclinationMeasuring(peripheralUUID: String) {
+        this.bluetoothSensorAccessor.startInclinationMeasuring(peripheralUUID)
     }
 
-    private suspend fun stopInclinationMeasuring() {
-        this.bluetoothSensorAccessor.stopInclinationMeasuring()
+    private suspend fun stopInclinationMeasuring(peripheralUUID: String) {
+        this.bluetoothSensorAccessor.stopInclinationMeasuring(peripheralUUID)
     }
 
     private fun onInclinationMeasurementReceived(inclination: InclinationMeasurement) {
         this.dispatch(BluetoothSensorDiscoveryAction.InclinationMeasurementReceived(inclination))
     }
 
-    private suspend fun fetchEnvironmentReadings() {
-        val pressure = this.bluetoothSensorAccessor.fetchPressure()
-        val humidity = this.bluetoothSensorAccessor.fetchHumidity()
-        val temperature = this.bluetoothSensorAccessor.fetchTemperature()
+    private suspend fun fetchEnvironmentReadings(peripheralUUID: String) {
+        val pressure = this.bluetoothSensorAccessor.fetchPressure(peripheralUUID)
+        val humidity = this.bluetoothSensorAccessor.fetchHumidity(peripheralUUID)
+        val temperature = this.bluetoothSensorAccessor.fetchTemperature(peripheralUUID)
         this.dispatch(BluetoothSensorDiscoveryAction.EnvironmentReadingsFetched(EnvironmentReadings(
             pressure,
             humidity,

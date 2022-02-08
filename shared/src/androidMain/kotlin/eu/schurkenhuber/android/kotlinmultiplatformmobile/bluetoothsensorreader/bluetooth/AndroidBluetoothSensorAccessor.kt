@@ -49,7 +49,7 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         }
     }
 
-    override fun disconnect() {
+    override fun disconnect(identifier: String) {
         try {
             this.context.unregisterReceiver(this.gattUpdateReceiver)
         } catch (exception: IllegalArgumentException) {
@@ -82,7 +82,7 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         }
     }
 
-    override suspend fun fetchPressure(): Double {
+    override suspend fun fetchPressure(peripheralIdentifier: String): Double {
         return this.fetchDoubleValue(
             ServiceUUIDs.ENVIRONMENTAL_SENSING,
             ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.PRESSURE,
@@ -111,21 +111,21 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         this.addAction(BluetoothLEService.ACTION_GATT_READ)
     }
 
-    override suspend fun fetchTemperature(): Double {
+    override suspend fun fetchTemperature(peripheralIdentifier: String): Double {
         return this.fetchDoubleValue(
             ServiceUUIDs.ENVIRONMENTAL_SENSING,
             ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.TEMPERATURE
         )
     }
 
-    override suspend fun fetchHumidity(): Double {
+    override suspend fun fetchHumidity(peripheralIdentifier: String): Double {
         return this.fetchDoubleValue(
             ServiceUUIDs.ENVIRONMENTAL_SENSING,
             ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.HUMIDITY
         )
     }
 
-    override suspend fun startInclinationMeasuring() {
+    override suspend fun startInclinationMeasuring(peripheralIdentifier: String) {
         val intentFilter = IntentFilter().apply {
             this.addAction(BluetoothLEService.ACTION_GATT_NOTIFICATION)
         }
@@ -146,7 +146,7 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         }
     }
 
-    override suspend fun stopInclinationMeasuring() {
+    override suspend fun stopInclinationMeasuring(peripheralIdentifier: String) {
         this.context.unregisterReceiver(this.inclinationMeasurementHandler)
         this.bluetoothLEService?.cancelCharacteristicNotification(
             ServiceUUIDs.INCLINATION_SERVICE,
@@ -154,11 +154,11 @@ class AndroidBluetoothSensorAccessor(private val context: Context) : BluetoothSe
         )
     }
 
-    override suspend fun startBlinking() {
+    override suspend fun startBlinking(peripheralIdentifier: String) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun stopBlinking() {
+    override suspend fun stopBlinking(peripheralIdentifier: String) {
         TODO("Not yet implemented")
     }
 }

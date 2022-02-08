@@ -20,18 +20,22 @@ struct DiscoveryView: ConnectedView {
         
         let onStartDiscovery: () -> Void
         let onStopDiscovery: () -> Void
+        let onConnectToDevice: (BluetoothDeviceInformation) -> Void
     }
     
-    func map(state: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props {
+    func map(reduxState: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props {
         return Props(
-            discovering: state.scanning,
-            discoveredDevices: Array(state.discoveredDevices.values)
+            discovering: reduxState.scanning,
+            discoveredDevices: Array(reduxState.discoveredDevices.values)
                 .sorted(by: { leftHandSide, rightHandSide in
                     rightHandSide.rssi < leftHandSide.rssi
                 }
             ),
             onStartDiscovery: { dispatch(BluetoothSensorDiscoveryAction.DiscoverDevices(forceReload: false)) },
-            onStopDiscovery: { dispatch(BluetoothSensorDiscoveryAction.StopDiscovery(force: true)) }
+            onStopDiscovery: { dispatch(BluetoothSensorDiscoveryAction.StopDiscovery(force: true)) },
+            onConnectToDevice: { deviceInformation in
+                dispatch(BluetoothSensorDiscoveryAction.ConnectToSensor(deviceInformation: deviceInformation))
+            }
         )
     }
     
@@ -42,11 +46,10 @@ struct DiscoveryView: ConnectedView {
             } else {
                 Button("Stop discovery", action: properties.onStopDiscovery)
             }
-            Spacer()
-            Text("Discovered devices")
-            Spacer()
             List(properties.discoveredDevices) { device in
-                Text("\(device.name) (RSSI = \(device.rssi))")
+                Button("\(device.name) (RSSI = \(device.rssi))") {
+                    properties.onConnectToDevice(device)
+                }
             }
         }
     }

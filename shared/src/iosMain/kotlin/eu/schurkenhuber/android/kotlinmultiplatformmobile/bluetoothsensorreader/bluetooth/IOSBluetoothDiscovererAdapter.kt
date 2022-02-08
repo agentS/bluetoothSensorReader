@@ -4,20 +4,16 @@ import com.badoo.reaktive.observable.Observable
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.model.BluetoothDeviceInformation
 
 // This class is only required because the class IOSBluetoothDiscoverer depends on Objective-C-specific functionality and Kotlin/Native does not allow a class to both implement an Objective-C protocol as well as a Kotlin interface
-class IOSBluetoothDiscovererAdapter : BluetoothDiscoverer {
-    private val iosBluetoothDiscoverer: IOSBluetoothDiscoverer
+class IOSBluetoothDiscovererAdapter(iosBluetoothAccessor: IOSBluetoothAccessor) : BluetoothDiscoverer {
+    private val bluetoothSensorAccessor: IOSBluetoothAccessor = iosBluetoothAccessor
 
-    init {
-        this.iosBluetoothDiscoverer = IOSBluetoothDiscoverer()
-    }
-
-    override val onDeviceDiscovered: Observable<BluetoothDeviceInformation> = this.iosBluetoothDiscoverer.onDeviceDiscovered
+    override val onDeviceDiscovered: Observable<BluetoothDeviceInformation> = this.bluetoothSensorAccessor.onDeviceDiscovered
 
     override fun startDiscovery() {
-        this.iosBluetoothDiscoverer.startDiscovery()
+        this.bluetoothSensorAccessor.startDiscovery()
     }
 
     override fun stopDiscovery() {
-        this.iosBluetoothDiscoverer.stopDiscovery()
+        this.bluetoothSensorAccessor.stopDiscovery()
     }
 }

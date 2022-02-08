@@ -6,9 +6,10 @@ class iOSApp: App {
     let store: ObservableBluetoothSensorDiscoveryStore
     
     required init() {
+        let bluetoothAccessor = IOSBluetoothUtilities.companion.createIOSBluetoothAccessor()
         self.store = ObservableBluetoothSensorDiscoveryStore(store: BluetoothSensorDiscoveryStore(
-            bluetoothDiscoverer: IOSBluetoothDiscovererAdapter(),
-            bluetoothSensorAccessor: IOSBluetoothSensorAccessorAdapter()
+            bluetoothDiscoverer: IOSBluetoothDiscovererAdapter(iosBluetoothAccessor: bluetoothAccessor),
+            bluetoothSensorAccessor: IOSBluetoothSensorAccessorAdapter(iosBluetoothAccessor: bluetoothAccessor)
         ))
     }
     
@@ -20,7 +21,7 @@ class iOSApp: App {
 }
 
 class ObservableBluetoothSensorDiscoveryStore : ObservableObject {
-    @Published public var state: BluetoothSensorDiscoveryState = BluetoothSensorDiscoveryState(
+    @Published public var reduxState: BluetoothSensorDiscoveryState = BluetoothSensorDiscoveryState(
         scanning: false,
         connectionStatus: .disconnected,
         discoveredDevices: [:],
@@ -37,8 +38,8 @@ class ObservableBluetoothSensorDiscoveryStore : ObservableObject {
     
     init(store: BluetoothSensorDiscoveryStore) {
         self.store = store
-        self.stateWatcher = self.store.watchState().watch { [weak self] state in
-            self?.state = state
+        self.stateWatcher = self.store.watchState().watch { [weak self] reduxState in
+            self?.reduxState = reduxState
         }
         self.sideEffectWatcher = self.store.watchSideEffect().watch { [weak self] sideEffect in
             self?.sideEffect = sideEffect
@@ -61,13 +62,13 @@ public protocol ConnectedView : View {
     associatedtype Props
     associatedtype V : View
     
-    func map(state: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props
+    func map(reduxState: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props
     func body(properties: Props) -> V
 }
 
 public extension ConnectedView {
-    func render(state: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> V {
-        let properties = map(state: state, dispatch: dispatch)
+    func render(reduxState: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> V {
+        let properties = map(reduxState: reduxState, dispatch: dispatch)
         return body(properties: properties)
     }
     
@@ -81,6 +82,6 @@ public struct StoreConnector<V: View>: View {
     let content: (BluetoothSensorDiscoveryState, @escaping DispatchFunction) -> V
     
     public var body: V {
-        return content(store.state, store.dispatch)
+        return content(store.reduxState, store.dispatch)
     }
 }

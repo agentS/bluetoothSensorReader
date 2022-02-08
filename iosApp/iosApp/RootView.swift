@@ -1,11 +1,23 @@
 import SwiftUI
 import shared
 
-struct RootView: View {
-    @EnvironmentObject var store: ObservableBluetoothSensorDiscoveryStore
+struct RootView: ConnectedView {
+    struct Props {
+        let selectedDevice: BluetoothDeviceInformation?
+    }
     
-	var body: some View {
-        DiscoveryView()
+    func map(reduxState: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props {
+        return Props(selectedDevice: reduxState.connectedDevice)
+    }
+    
+    func body(properties: Props) -> some View {
+        VStack {
+            if let selectedDevice = properties.selectedDevice {
+                SensorReadingView(device: selectedDevice)
+            } else {
+                DiscoveryView()
+            }
+        }
 	}
 }
 

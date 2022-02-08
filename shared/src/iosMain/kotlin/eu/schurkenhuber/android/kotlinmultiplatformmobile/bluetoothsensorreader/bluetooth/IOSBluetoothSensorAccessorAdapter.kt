@@ -3,50 +3,56 @@ package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader
 import com.badoo.reaktive.observable.Observable
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.InclinationMeasurement
 
-class IOSBluetoothSensorAccessorAdapter : BluetoothSensorAccessor {
-    private val blueoothSensorAccessor: IOSBluetoothSensorAccessor
+class IOSBluetoothSensorAccessorAdapter(iosBluetoothAccessor: IOSBluetoothAccessor) : BluetoothSensorAccessor {
+    private val bluetoothSensorAccessor: IOSBluetoothAccessor = iosBluetoothAccessor
 
-    init {
-        this.blueoothSensorAccessor = IOSBluetoothSensorAccessor()
-    }
-
-    override val connectionStatus: Observable<ConnectionStatus> = this.blueoothSensorAccessor.connectionStatus
+    override val connectionStatus: Observable<ConnectionStatus> = this.bluetoothSensorAccessor.connectionStatus
 
     override fun connect(identifier: String) {
-        this.blueoothSensorAccessor.connect(identifier)
+        println("Connecting to device $identifier...")
+        this.bluetoothSensorAccessor.connect(identifier)
     }
 
-    override suspend fun fetchPressure(): Double {
-        return this.blueoothSensorAccessor.fetchPressure()
+    override suspend fun fetchPressure(peripheralIdentifier: String): Double {
+        return this.bluetoothSensorAccessor.readCharacteristic(
+            peripheralIdentifier,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.PRESSURE
+        ) / 10f
     }
 
-    override suspend fun fetchTemperature(): Double {
-        return this.blueoothSensorAccessor.fetchTemperature()
+    override suspend fun fetchTemperature(peripheralIdentifier: String): Double {
+        return this.bluetoothSensorAccessor.readCharacteristic(
+            peripheralIdentifier,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.TEMPERATURE
+        ) / 100f
     }
 
-    override suspend fun fetchHumidity(): Double {
-        return this.blueoothSensorAccessor.fetchHumidity()
+    override suspend fun fetchHumidity(peripheralIdentifier: String): Double {
+        return this.bluetoothSensorAccessor.readCharacteristic(
+            peripheralIdentifier,
+            ServiceUUIDs.EnvironmentalSensingCharacteristicUUIDs.HUMIDITY
+        ) / 100f
     }
 
-    override val inclinationMeasurements: Observable<InclinationMeasurement> = this.blueoothSensorAccessor.inclinationMeasurements
+    override val inclinationMeasurements: Observable<InclinationMeasurement> = this.bluetoothSensorAccessor.inclinationMeasurements
 
-    override suspend fun startInclinationMeasuring() {
-        this.blueoothSensorAccessor.startInclinationMeasuring()
+    override suspend fun startInclinationMeasuring(peripheralIdentifier: String) {
+        TODO("Not yet implemented")
     }
 
-    override suspend fun stopInclinationMeasuring() {
-        this.blueoothSensorAccessor.stopInclinationMeasuring()
+    override suspend fun stopInclinationMeasuring(peripheralIdentifier: String) {
+        TODO("Not yet implemented")
     }
 
-    override suspend fun startBlinking() {
-        this.blueoothSensorAccessor.startBlinking()
+    override suspend fun startBlinking(peripheralIdentifier: String) {
+        TODO("Not yet implemented")
     }
 
-    override suspend fun stopBlinking() {
-        this.blueoothSensorAccessor.stopBlinking()
+    override suspend fun stopBlinking(peripheralIdentifier: String) {
+        TODO("Not yet implemented")
     }
 
-    override fun disconnect() {
-        this.blueoothSensorAccessor.disconnect()
+    override fun disconnect(identifier: String) {
+        this.bluetoothSensorAccessor.disconnect(identifier)
     }
 }
