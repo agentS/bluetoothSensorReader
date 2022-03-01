@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.res.stringResource
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryAction
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryStore
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.ConnectionStatus
@@ -35,6 +36,6 @@ class ConnectingActivity : ComponentActivity() {
             val intent = Intent(this, DiscoveryActivity::class.java)
             this.startActivity(intent)
         }
-        Text(text = this.applicationContext.getString(R.string.lblConnectiong))
+        Text(text = stringResource(R.string.lblConnectiong))
     }
 }

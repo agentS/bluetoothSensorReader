@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryAction
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryStore
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.ConnectionStatus
@@ -40,27 +41,27 @@ class SensorReadingActivity : ComponentActivity() {
         }
 
         Column {
-            Text(text = "${context.getString(R.string.lblConnectionStatus)} ${state.value.connectionStatus}")
+            Text(text = "${stringResource(R.string.lblConnectionStatus)} ${state.value.connectionStatus}")
 
-            Text(text = "${context.getString(R.string.lblInclination)} = ${state.value.inclination.inclination} (${context.getString(R.string.lblCounter)}: ${state.value.inclination.counter})")
+            Text(text = "${stringResource(R.string.lblInclination)} = ${state.value.inclination.inclination} (${stringResource(R.string.lblCounter)}: ${state.value.inclination.counter})")
             if (!state.value.measuringInclination) {
                 Button(onClick = this@SensorReadingActivity::startInclinationMeasurement, Modifier.fillMaxWidth()) {
-                    Text(text = context.getString(R.string.btnStartInclinationMeasurement))
+                    Text(text = stringResource(R.string.btnStartInclinationMeasurement))
                 }
             } else {
                 Button(onClick = this@SensorReadingActivity::stopInclinationMeasurement, Modifier.fillMaxWidth()) {
-                    Text(text = context.getString(R.string.btnStopInclinationMeasurement))
+                    Text(text = stringResource(R.string.btnStopInclinationMeasurement))
                 }
             }
 
-            Text(text = "${context.getString(R.string.lblPressure)} = ${state.value.environmentReadings.pressure} mbar")
-            Text(text = "${context.getString(R.string.lblHumidity)} = ${state.value.environmentReadings.humidity} %")
-            Text(text = "${context.getString(R.string.lblTemperature)} = ${state.value.environmentReadings.temperature} °C")
+            Text(text = "${stringResource(R.string.lblPressure)} = ${state.value.environmentReadings.pressure} mbar")
+            Text(text = "${stringResource(R.string.lblHumidity)} = ${state.value.environmentReadings.humidity} %")
+            Text(text = "${stringResource(R.string.lblTemperature)} = ${state.value.environmentReadings.temperature} °C")
             Button(onClick = this@SensorReadingActivity::fetchEnvironmentReadings, Modifier.fillMaxWidth()) {
-                Text(text = context.getString(R.string.btnFetchEnvironmentReadings))
+                Text(text = stringResource(R.string.btnFetchEnvironmentReadings))
             }
             Button(onClick = this@SensorReadingActivity::disconnect, Modifier.fillMaxWidth()) {
-                Text(text = context.getString(R.string.btnDisconnect))
+                Text(text = stringResource(R.string.btnDisconnect))
             }
         }
     }

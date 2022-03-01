@@ -2,6 +2,8 @@
 <resources>
     <string name="lblDiscoverDevices">Discover devices</string>
     <string name="lblApplicationName">Bluetooth Discovery</string>
+    <string name="btnStartDiscovery">Start discovery</string>
+    <string name="btnStopDiscovery">Stop discovery</string>
     <string name="lblConnectiong">Connecting...</string>
     <string name="lblConnectionStatus">Connection status: </string>
     <string name="lblPressure">Pressure</string>
