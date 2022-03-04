@@ -1,21 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.android">
+
     <application
         android:name=".App"
-        android:label="@string/lblApplicationName"
         android:allowBackup="false"
+        android:label="@string/lblApplicationName"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity
+            android:name=".ArchiveActivity"
+            android:exported="false"
+            android:label="@string/title_activity_archive"
+            android:theme="@style/AppTheme" />
+        <activity android:name=".ArchiveDetailActivity" />
         <activity
             android:name=".DiscoveryActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity android:name=".ConnectingActivity" />
         <activity android:name=".SensorReadingActivity" />
     </application>
-</manifest> 
+
+</manifest>

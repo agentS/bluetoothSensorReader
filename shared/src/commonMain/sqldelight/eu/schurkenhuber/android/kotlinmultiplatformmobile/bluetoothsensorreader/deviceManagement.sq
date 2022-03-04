@@ -1,0 +1,11 @@
+createDevice:
+INSERT INTO device(hardware_identifier) VALUES (?);
+
+findDeviceByHardwareIdentifier:
+SELECT id, hardware_identifier FROM device WHERE hardware_identifier = ?;
+
+findDeviceByID:
+SELECT id, hardware_identifier FROM device WHERE id = ?;
+
+findAllDevices:
+SELECT id, hardware_identifier FROM device;

@@ -1,9 +1,13 @@
 package eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application
 
 import com.badoo.reaktive.observable.subscribe
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.BluetoothSensorAccessorDatabase
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.Device
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.Measurement
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.BluetoothDiscoverer
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.BluetoothSensorAccessor
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.bluetooth.ConnectionStatus
+import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.databasemodel.MeasurementTypeIDs
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.model.BluetoothDeviceInformation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -12,7 +16,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.Clock
 
 data class EnvironmentReadings(
     val pressure: Double,
@@ -32,7 +36,9 @@ data class BluetoothSensorDiscoveryState(
     val connectedDevice: BluetoothDeviceInformation?,
     val environmentReadings: EnvironmentReadings,
     val measuringInclination: Boolean,
-    val inclination: InclinationMeasurement
+    val inclination: InclinationMeasurement,
+    val registeredDevices: List<Device>,
+    val measurementRecords: List<Measurement>
 ) : State
 
 sealed class BluetoothSensorDiscoveryAction : Action {
@@ -47,13 +53,16 @@ sealed class BluetoothSensorDiscoveryAction : Action {
     data class StartInclinationMeasuring(val force: Boolean) : BluetoothSensorDiscoveryAction()
     data class InclinationMeasurementReceived(val inclination: InclinationMeasurement) : BluetoothSensorDiscoveryAction()
     data class StopInclinationMeasuring(val force: Boolean) : BluetoothSensorDiscoveryAction()
+    data class LoadRegisteredDevices(val force: Boolean) : BluetoothSensorDiscoveryAction()
+    data class LoadMeasurementRecords(val registeredDeviceID: Long) : BluetoothSensorDiscoveryAction()
 }
 
 sealed class BluetoothSensorDiscoverySideEffect : Effect {}
 
 class BluetoothSensorDiscoveryStore(
     private val bluetoothDiscoverer: BluetoothDiscoverer,
-    private val bluetoothSensorAccessor: BluetoothSensorAccessor
+    private val bluetoothSensorAccessor: BluetoothSensorAccessor,
+    private val database: BluetoothSensorAccessorDatabase
 )
     :   Store<BluetoothSensorDiscoveryState, BluetoothSensorDiscoveryAction, BluetoothSensorDiscoverySideEffect>,
         CoroutineScope by CoroutineScope(Dispatchers.Main) {
@@ -65,7 +74,9 @@ class BluetoothSensorDiscoveryStore(
         connectedDevice = null,
         EnvironmentReadings(pressure = 0.0, humidity = 0.0, temperature = 0.0),
         measuringInclination = false,
-        inclination = InclinationMeasurement(counter = 0, inclination = 0.0)
+        inclination = InclinationMeasurement(counter = 0, inclination = 0.0),
+        registeredDevices = emptyList(),
+        measurementRecords = emptyList()
     ))
     private val sideEffect = MutableSharedFlow<BluetoothSensorDiscoverySideEffect>()
 
@@ -122,12 +133,18 @@ class BluetoothSensorDiscoveryStore(
                 )
             }
             is BluetoothSensorDiscoveryAction.ConnectionEstablished -> {
+                if (previousState.connectedDevice != null) {
+                    this.registerDevice(previousState.connectedDevice);
+                } else {
+                    throw IllegalStateException("No device for connecting to has been selected.")
+                }
                 previousState.copy(
                     connectionStatus = ConnectionStatus.CONNECTED
                 )
             }
             is BluetoothSensorDiscoveryAction.DisconnectFromSensor -> {
-                runBlocking {
+                // TODO: replace with solution that waits for closed BluetoothLE connection
+                launch {
                     if (previousState.connectionStatus == ConnectionStatus.CONNECTED) {
                         this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring(previousState.connectedDevice?.identifier ?: "")
                     }
@@ -150,6 +167,11 @@ class BluetoothSensorDiscoveryStore(
                 previousState
             }
             is BluetoothSensorDiscoveryAction.EnvironmentReadingsFetched -> {
+                if (previousState.connectedDevice != null) {
+                    this.storeEnvironmentReadings(previousState.connectedDevice, action.environmentReadings)
+                } else {
+                    throw IllegalStateException("Could not store the environment readings: No active BluetoothLE connection.")
+                }
                 previousState.copy(environmentReadings = action.environmentReadings)
             }
             is BluetoothSensorDiscoveryAction.StartInclinationMeasuring -> {
@@ -162,6 +184,13 @@ class BluetoothSensorDiscoveryStore(
             is BluetoothSensorDiscoveryAction.StopInclinationMeasuring -> {
                 launch { this@BluetoothSensorDiscoveryStore.stopInclinationMeasuring(previousState.connectedDevice?.identifier ?: "") }
                 previousState.copy(measuringInclination = false)
+            }
+            is BluetoothSensorDiscoveryAction.LoadRegisteredDevices -> {
+                val registeredDevices = this.fetchRegisteredDevices()
+                previousState.copy(registeredDevices = registeredDevices)
+            }
+            is BluetoothSensorDiscoveryAction.LoadMeasurementRecords -> {
+                previousState.copy(measurementRecords = this.fetchMeasurementRecords(action.registeredDeviceID))
             }
         }
 
@@ -221,4 +250,41 @@ class BluetoothSensorDiscoveryStore(
             temperature,
         )))
     }
+
+    private fun registerDevice(connectedDevice: BluetoothDeviceInformation) {
+        val device = this.database.deviceManagementQueries.findDeviceByHardwareIdentifier(
+            connectedDevice.identifier
+        ).executeAsOneOrNull()
+        if (device == null) {
+            this.database.deviceManagementQueries.createDevice(connectedDevice.identifier)
+        }
+    }
+
+    private fun storeEnvironmentReadings(
+        connectedDevice: BluetoothDeviceInformation,
+        environmentReadings: EnvironmentReadings
+    ) {
+        val device = this.database.deviceManagementQueries.findDeviceByHardwareIdentifier(
+            connectedDevice.identifier
+        ).executeAsOne()
+
+        val timestamp = Clock.System.now().toString()
+        val unitsToValues: Map<Long, Double> = mapOf(
+            MeasurementTypeIDs.TEMPERATURE to environmentReadings.temperature,
+            MeasurementTypeIDs.HUMIDITY to environmentReadings.humidity,
+            MeasurementTypeIDs.ATMOSPHERIC_PRESSURE to environmentReadings.pressure
+        )
+        for ((unitID, measurementValue) in unitsToValues) {
+            this.database.measurementQueries.storeMeasurement(
+                timestamp, device.id,
+                unitID, measurementValue
+            )
+        }
+    }
+
+    private fun fetchRegisteredDevices(): List<Device> =
+        this.database.deviceManagementQueries.findAllDevices().executeAsList()
+
+    private fun fetchMeasurementRecords(deviceID: Long): List<Measurement> =
+        this.database.measurementQueries.findAllByDeviceID(deviceID).executeAsList()
 }

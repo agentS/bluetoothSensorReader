@@ -1,6 +1,7 @@
 plugins {
     kotlin("multiplatform")
     id("com.android.library")
+    id("com.squareup.sqldelight")
 }
 
 kotlin {
@@ -23,6 +24,8 @@ kotlin {
                 implementation("com.badoo.reaktive:reaktive:1.2.1")
                 implementation("com.badoo.reaktive:reaktive-annotations:1.2.1")
                 implementation("com.badoo.reaktive:coroutines-interop:1.2.1-nmtc")
+                implementation("com.squareup.sqldelight:coroutines-extensions:1.5.3")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.3.2")
             }
         }
         val commonTest by getting {
@@ -31,7 +34,11 @@ kotlin {
                 implementation(kotlin("test-annotations-common"))
             }
         }
-        val androidMain by getting
+        val androidMain by getting {
+            dependencies {
+                implementation("com.squareup.sqldelight:android-driver:1.5.3")
+            }
+        }
         val androidTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
@@ -46,6 +53,9 @@ kotlin {
             iosX64Main.dependsOn(this)
             iosArm64Main.dependsOn(this)
             //iosSimulatorArm64Main.dependsOn(this)
+            dependencies {
+                implementation("com.squareup.sqldelight:native-driver:1.5.3")
+            }
         }
         val iosX64Test by getting
         val iosArm64Test by getting
@@ -65,5 +75,11 @@ android {
     defaultConfig {
         minSdk = 24
         targetSdk = 31
+    }
+}
+
+sqldelight {
+    database("BluetoothSensorAccessorDatabase") {
+        packageName = "eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader"
     }
 }

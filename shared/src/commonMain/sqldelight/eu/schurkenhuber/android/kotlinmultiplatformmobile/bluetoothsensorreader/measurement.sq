@@ -1,0 +1,8 @@
+storeMeasurement:
+INSERT INTO measurement(timestamp, device_id, measurement_type_id, value)
+VALUES (?, ?, ?, ?);
+
+findAllByDeviceID:
+SELECT *
+FROM measurement
+WHERE device_id = ?;

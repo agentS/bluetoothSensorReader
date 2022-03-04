@@ -5,26 +5,19 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.Greeting
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryAction
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.application.BluetoothSensorDiscoveryStore
 import eu.schurkenhuber.android.kotlinmultiplatformmobile.bluetoothsensorreader.model.BluetoothDeviceInformation
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.onEach
 import org.koin.android.ext.android.inject
 
 class DiscoveryActivity : ComponentActivity() {
@@ -34,7 +27,7 @@ class DiscoveryActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         this.setContent {
-            DiscoveryScreen()
+            this.DiscoveryScreen()
         }
     }
 
@@ -48,6 +41,8 @@ class DiscoveryActivity : ComponentActivity() {
         }
 
         Column {
+            this@DiscoveryActivity.ArchiveNavigationButton()
+
             if (!state.value.scanning) {
                 Button(onClick = this@DiscoveryActivity::startDiscovery, Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.btnStartDiscovery))
@@ -79,6 +74,20 @@ class DiscoveryActivity : ComponentActivity() {
     fun connectToSensor(deviceInformation: BluetoothDeviceInformation) {
         this.store.dispatch(BluetoothSensorDiscoveryAction.ConnectToSensor(deviceInformation))
         val intent = Intent(this, ConnectingActivity::class.java)
+        this.startActivity(intent)
+    }
+
+    @Composable
+    fun ArchiveNavigationButton() {
+        Button(onClick = this::switchToArchiveActivity, Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.btnArchive))
+        }
+    }
+
+    private fun switchToArchiveActivity() {
+        this.store.dispatch(BluetoothSensorDiscoveryAction.LoadRegisteredDevices(force = false))
+
+        val intent = Intent(this, ArchiveActivity::class.java)
         this.startActivity(intent)
     }
 }

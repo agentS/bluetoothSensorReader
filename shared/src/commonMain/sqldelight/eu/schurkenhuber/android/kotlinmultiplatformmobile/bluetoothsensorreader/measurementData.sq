@@ -1,0 +1,23 @@
+CREATE TABLE measurement_type(
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE device(
+    id INTEGER PRIMARY KEY,
+    hardware_identifier TEXT NOT NULL,
+    CONSTRAINT uq_device UNIQUE (hardware_identifier)
+);
+
+CREATE TABLE measurement(
+    timestamp TEXT NOT NULL,
+    value REAL NOT NULL,
+    measurement_type_id INTEGER NOT NULL,
+    device_id INTEGER NOT NULL,
+    CONSTRAINT fk_measurement_to_measurement_type FOREIGN KEY (measurement_type_id) REFERENCES measurement_type(id),
+    CONSTRAINT pk_measruement PRIMARY KEY (measurement_type_id, device_id, timestamp)
+);
+
+INSERT INTO measurement_type(id, name) VALUES (0, 'Temperature');
+INSERT INTO measurement_type(id, name) VALUES (1, 'Humidity');
+INSERT INTO measurement_type(id, name) VALUES (2, 'Atmospheric pressure');
