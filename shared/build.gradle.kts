@@ -24,7 +24,7 @@ kotlin {
                 implementation("com.badoo.reaktive:reaktive:1.2.1")
                 implementation("com.badoo.reaktive:reaktive-annotations:1.2.1")
                 implementation("com.badoo.reaktive:coroutines-interop:1.2.1-nmtc")
-                implementation("com.squareup.sqldelight:coroutines-extensions:1.5.3")
+                //implementation("com.squareup.sqldelight:coroutines-extensions:1.5.3")
                 implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.3.2")
             }
         }

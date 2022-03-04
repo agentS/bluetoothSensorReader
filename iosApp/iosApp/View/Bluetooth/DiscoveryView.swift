@@ -21,6 +21,7 @@ struct DiscoveryView: ConnectedView {
         let onStartDiscovery: () -> Void
         let onStopDiscovery: () -> Void
         let onConnectToDevice: (BluetoothDeviceInformation) -> Void
+        let onFetchRegisteredDevices: () -> Void
     }
     
     func map(reduxState: BluetoothSensorDiscoveryState, dispatch: @escaping DispatchFunction) -> Props {
@@ -35,12 +36,15 @@ struct DiscoveryView: ConnectedView {
             onStopDiscovery: { dispatch(BluetoothSensorDiscoveryAction.StopDiscovery(force: true)) },
             onConnectToDevice: { deviceInformation in
                 dispatch(BluetoothSensorDiscoveryAction.ConnectToSensor(deviceInformation: deviceInformation))
-            }
+            },
+            onFetchRegisteredDevices: { dispatch(BluetoothSensorDiscoveryAction.LoadRegisteredDevices(force: false)) }
         )
     }
     
     func body(properties: Props) -> some View {
         VStack {
+            Button("Archive", action: properties.onFetchRegisteredDevices)
+                .padding(.top, 12)
             if !properties.discovering {
                 Button("Start discovery", action: properties.onStartDiscovery)
             } else {

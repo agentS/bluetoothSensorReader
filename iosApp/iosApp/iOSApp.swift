@@ -9,7 +9,8 @@ class iOSApp: App {
         let bluetoothAccessor = IOSBluetoothUtilities.companion.createIOSBluetoothAccessor()
         self.store = ObservableBluetoothSensorDiscoveryStore(store: BluetoothSensorDiscoveryStore(
             bluetoothDiscoverer: IOSBluetoothDiscovererAdapter(iosBluetoothAccessor: bluetoothAccessor),
-            bluetoothSensorAccessor: IOSBluetoothSensorAccessorAdapter(iosBluetoothAccessor: bluetoothAccessor)
+            bluetoothSensorAccessor: IOSBluetoothSensorAccessorAdapter(iosBluetoothAccessor: bluetoothAccessor),
+            database: DriverFactoryKt.createDatabase(driverFactory: DriverFactory())
         ))
     }
     
@@ -28,7 +29,9 @@ class ObservableBluetoothSensorDiscoveryStore : ObservableObject {
         connectedDevice: nil,
         environmentReadings: EnvironmentReadings(pressure: 0.0, humidity: 0.0, temperature: 0.0),
         measuringInclination: false,
-        inclination: InclinationMeasurement(counter: 0, inclination: 0.0)
+        inclination: InclinationMeasurement(counter: 0, inclination: 0.0),
+        registeredDevices: [],
+        measurementRecords: []
     )
     @Published public var sideEffect: BluetoothSensorDiscoverySideEffect?
     
